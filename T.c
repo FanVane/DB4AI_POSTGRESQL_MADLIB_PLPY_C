@@ -82,9 +82,6 @@ __db4ai_execute_row_log(PG_FUNCTION_ARGS){
     PG_RETURN_ARRAYTYPE_P(result);
 }
 
-
-
-
 /**
  * 输入一个float8数组，对每个元素求平方根之后返回数组。
  * @param arr_raw 输入的float8数组
@@ -107,3 +104,97 @@ __db4ai_execute_row_sqrt(PG_FUNCTION_ARGS){
     PG_RETURN_ARRAYTYPE_P(result);
 }
 
+/**
+ * 输入一个float8数组，对每个元素求e为底的指数之后返回数组。
+ * @param arr_raw 输入的float8数组
+ * @return 求e为底的指数之后的数组
+ * @author db4ai_exp
+ */ 
+PG_FUNCTION_INFO_V1(__db4ai_execute_row_exp);
+Datum
+__db4ai_execute_row_exp(PG_FUNCTION_ARGS){
+    ArrayType* arr_raw = PG_GETARG_ARRAYTYPE_P(0);          // 用PG_GETARG_ARRAYTYPE_P(_COPY) 获取数组类型的指针
+    float8* arr = (float8 *) ARR_DATA_PTR(arr_raw);         // 用ARR_DATA_PTR获取实际的指针（就是数组的头）
+    int size = ARRNELEMS(arr_raw);                          // 用ARRNELEMS从源数据中获取数组的元素个数
+    // 构建一个Datum数组
+    Datum* ans_arr_back = (Datum*) palloc(size * sizeof(Datum));    // 用palloc动态分配内存
+    for(int i=0; i<size; i++){
+        ans_arr_back[i] = Float8GetDatum(exp(arr[i]));
+    }
+    // 返回该数组
+    ArrayType* result = construct_array(ans_arr_back, size, FLOAT8OID, sizeof(float8), FLOAT8PASSBYVAL, 'd');
+    PG_RETURN_ARRAYTYPE_P(result);
+}
+
+/**
+ * 输入一个float8数组，对每个元素求余数之后返回数组。
+ * @param arr1_raw 输入的float8数组被除数
+ * @param arr2_raw 输入的float8数组除数
+ * @return 求除法之后的数组
+ * @author db4ai_div
+ */ 
+PG_FUNCTION_INFO_V1(__db4ai_execute_row_div);
+Datum
+__db4ai_execute_row_div(PG_FUNCTION_ARGS){
+    ArrayType* arr1_raw = PG_GETARG_ARRAYTYPE_P(0);          // 用PG_GETARG_ARRAYTYPE_P(_COPY) 获取数组类型的指针
+    ArrayType* arr2_raw = PG_GETARG_ARRAYTYPE_P(1);
+    float8* arr1 = (float8 *) ARR_DATA_PTR(arr1_raw);         // 用ARR_DATA_PTR获取实际的指针（就是数组的头）
+    float8* arr2 = (float8 *) ARR_DATA_PTR(arr2_raw);
+    int size = ARRNELEMS(arr1_raw);                          // 用ARRNELEMS从源数据中获取数组的元素个数
+    // 构建一个Datum数组
+    Datum* ans_arr_back = (Datum*) palloc(size * sizeof(Datum));    // 用palloc动态分配内存
+    for(int i=0; i<size; i++){
+        ans_arr_back[i] = Float8GetDatum(arr1[i]/arr2[i]);
+    }
+    // 返回该数组
+    ArrayType* result = construct_array(ans_arr_back, size, FLOAT8OID, sizeof(float8), FLOAT8PASSBYVAL, 'd');
+    PG_RETURN_ARRAYTYPE_P(result);
+}
+
+
+/**
+ * 输入一个float8数组，对每个元素为底，求输入元素对应的指数之后返回数组。
+ * @param arr_raw 输入的float8数组
+ * @param pow_exp 进行指数的值
+ * @return 指数运算之后的数组
+ * @author db4ai_pow
+ */ 
+PG_FUNCTION_INFO_V1(__db4ai_execute_row_pow);
+Datum
+__db4ai_execute_row_pow(PG_FUNCTION_ARGS){
+    ArrayType* arr_raw = PG_GETARG_ARRAYTYPE_P(0);          // 用PG_GETARG_ARRAYTYPE_P(_COPY) 获取数组类型的指针
+    float8 pow_exp = PG_GETARG_FLOAT8(1);
+    float8* arr = (float8 *) ARR_DATA_PTR(arr_raw);         // 用ARR_DATA_PTR获取实际的指针（就是数组的头）
+    int size = ARRNELEMS(arr_raw);                          // 用ARRNELEMS从源数据中获取数组的元素个数
+    // 构建一个Datum数组
+    Datum* ans_arr_back = (Datum*) palloc(size * sizeof(Datum));    // 用palloc动态分配内存
+    for(int i=0; i<size; i++){
+        ans_arr_back[i] = Float8GetDatum(pow(arr[i], pow_exp));
+    }
+    // 返回该数组
+    ArrayType* result = construct_array(ans_arr_back, size, FLOAT8OID, sizeof(float8), FLOAT8PASSBYVAL, 'd');
+    PG_RETURN_ARRAYTYPE_P(result);
+}
+
+
+/**
+ * 输入长度和数值，返回这么长的一个填充数组。
+ * @param size 将要输出的float8数组长度
+ * @param full_value 进行填充的值
+ * @return 指数运算之后的数组
+ * @author db4ai_pow
+ */ 
+PG_FUNCTION_INFO_V1(__db4ai_execute_row_full);
+Datum
+__db4ai_execute_row_full(PG_FUNCTION_ARGS){
+    int32 size = PG_GETARG_INT32(0);          // 用PG_GETARG_ARRAYTYPE_P(_COPY) 获取数组类型的指针
+    float8 full_value = PG_GETARG_FLOAT8(1);
+    // 构建一个Datum数组
+    Datum* ans_arr_back = (Datum*) palloc(size * sizeof(Datum));    // 用palloc动态分配内存
+    for(int i=0; i<size; i++){
+        ans_arr_back[i] = Float8GetDatum(full_value);
+    }
+    // 返回该数组
+    ArrayType* result = construct_array(ans_arr_back, size, FLOAT8OID, sizeof(float8), FLOAT8PASSBYVAL, 'd');
+    PG_RETURN_ARRAYTYPE_P(result);
+}
