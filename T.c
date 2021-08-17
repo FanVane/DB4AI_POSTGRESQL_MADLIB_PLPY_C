@@ -281,3 +281,29 @@ __db4ai_execute_row_argsort(PG_FUNCTION_ARGS){
     PG_RETURN_ARRAYTYPE_P(result);
 }
 
+
+/**
+ * 输入一个float8数组，对每个元素求softmax之后返回数组。
+ * @param arr_raw 输入的float8数组
+ * @return 求softmax之后的数组
+ * @author db4ai_softmax
+ */ 
+PG_FUNCTION_INFO_V1(__db4ai_execute_row_softmax);
+Datum
+__db4ai_execute_row_softmax(PG_FUNCTION_ARGS){
+    ArrayType* arr_raw = PG_GETARG_ARRAYTYPE_P(0);          // 用PG_GETARG_ARRAYTYPE_P(_COPY) 获取数组类型的指针
+    float8* arr = (float8 *) ARR_DATA_PTR(arr_raw);         // 用ARR_DATA_PTR获取实际的指针（就是数组的头）
+    int size = ARRNELEMS(arr_raw);                          // 用ARRNELEMS从源数据中获取数组的元素个数
+    float8 bottum = 0.0;
+    for(int i=0; i<size; i++){
+        bottum += exp(arr[i]);
+    }
+    // 构建一个Datum数组
+    Datum* ans_arr_back = (Datum*) palloc(size * sizeof(Datum));    // 用palloc动态分配内存
+    for(int i=0; i<size; i++){
+        ans_arr_back[i] = Float8GetDatum(exp(arr[i])/bottum);
+    }
+    // 返回该数组
+    ArrayType* result = construct_array(ans_arr_back, size, FLOAT8OID, sizeof(float8), FLOAT8PASSBYVAL, 'd');
+    PG_RETURN_ARRAYTYPE_P(result);
+}
