@@ -340,3 +340,45 @@ __db4ai_execute_row_sort(PG_FUNCTION_ARGS){
     ArrayType* result = construct_array(ans_arr_back, size, FLOAT8OID, sizeof(float8), FLOAT8PASSBYVAL, 'd');
     PG_RETURN_ARRAYTYPE_P(result);
 }
+
+/**
+ * 输入位置相关信息，计算出新的行号。
+ * @param row 目前的行
+ * @param col 目前的列
+ * @param old_dim2 原先列数
+ * @param dim2 目标列数
+ * @return 新的行号
+ * @author db4ai_reshape
+ */ 
+PG_FUNCTION_INFO_V1(__db4ai_execute_row_reshape); // 说明使用的模式是V1
+Datum // 所有Postgres函数的返回类型都是Datum
+__db4ai_execute_row_reshape(PG_FUNCTION_ARGS){ // 函数名(参数) 必须加上
+    int32 row = PG_GETARG_INT32(0)-1; // 注意：-1是为了便于计算，之后的结果再+1
+    int32 col = PG_GETARG_INT32(1)-1;
+    int32 old_dim2 = PG_GETARG_INT32(2);
+    int32 dim2 = PG_GETARG_INT32(3);
+    int32 rank = row * old_dim2 + col;
+    int32 new_row = rank/dim2+1;
+    PG_RETURN_INT32(new_row); // 返回函数值
+}
+
+/**
+ * 输入位置相关信息，计算出新的列号。
+ * @param row 目前的行
+ * @param col 目前的列
+ * @param old_dim2 原先列数
+ * @param dim2 目标列数
+ * @return 新的列号
+ * @author db4ai_reshape
+ */ 
+PG_FUNCTION_INFO_V1(__db4ai_execute_col_reshape); // 说明使用的模式是V1
+Datum // 所有Postgres函数的返回类型都是Datum
+__db4ai_execute_col_reshape(PG_FUNCTION_ARGS){ // 函数名(参数) 必须加上
+    int32 row = PG_GETARG_INT32(0)-1; // 注意：-1是为了便于计算，之后的结果再+1
+    int32 col = PG_GETARG_INT32(1)-1;
+    int32 old_dim2 = PG_GETARG_INT32(2);
+    int32 dim2 = PG_GETARG_INT32(3);
+    int32 rank = row * old_dim2 + col;
+    int32 new_col = rank - ((rank/dim2)*dim2) +1;
+    PG_RETURN_INT32(new_col); // 返回函数值
+}

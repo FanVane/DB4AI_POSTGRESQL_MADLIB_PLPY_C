@@ -223,9 +223,10 @@ if not_exists1 or not_exists2:
 # 建立输出表
 plpy.execute("DROP TABLE IF EXISTS "+output_table_name+";")
 # 调用执行函数
-plpy.execute("SELECT 1 as row, __db4ai_execute_row_full(1, __db4ai_execute_row_dot("+input_table1_name+".val,"+input_table2_name+".val)) as val "+
+plpy.execute("SELECT "+input_table1_name+".row as row, __db4ai_execute_row_full(1, __db4ai_execute_row_dot("+input_table1_name+".val,"+input_table2_name+".val)) as val "+
 " into "+output_table_name+\
 " from "+input_table1_name+", "+input_table2_name+\
+" where "+input_table1_name+".row = "+input_table2_name+".row"+\
 " ;")
 return 0
 $$ LANGUAGE plpythonu;
@@ -545,6 +546,63 @@ return 0
 $$ LANGUAGE plpythonu;
 ------------------------------------------------------------
 ------------------------------------------------------------
+-- db4ai_reshape(input_table_name TEXT,dim1 INT, dim2 INT,output_table_name TEXT)
+-- input_table_name 输入的矩阵表名
+-- dim1 新的行数
+-- dim2 新的列数 要求dim1*dim2 = old_dim1 * old_dim2 
+-- output_table_name 输出的向量表名
+-- 返回 执行状态码
+-- 效果 将输入的矩阵表重组，形成输出矩阵表，返回状态码
+------------------------------------------------------------
+--[客户端接口]--
+CREATE OR REPLACE FUNCTION
+db4ai_reshape(input_table_name TEXT,dim1 INT, dim2 INT,output_table_name TEXT) --调用时表名不用加什么引号，传个字符串即可
+RETURNS INTEGER AS $$
+# 确保input_table_name存在
+not_exists = plpy.execute("select count(*) from pg_class where relname = '"+input_table_name+"'")[0]["count"]==0
+if not_exists:
+    # 字符串参数代表的表不存在数据库中
+    return -1
+# 确保dim1,dim2非负数
+if dim1<0 or dim2<0:
+    # 数字参数为负
+    return -2
+# 确保dim1*dim2=old_dim1*old_dim2,目前未实现
+# 获取原先的列数
+old_dim2 = plpy.execute("select madlib.matrix_ndims('"+input_table_name+"', 'row=row, val=val') as shape;")[0]["shape"][1]
+# 建立表环境
+plpy.execute("DROP TABLE IF EXISTS "+output_table_name+";")
+plpy.execute("DROP TABLE IF EXISTS _"+input_table_name+";")
+plpy.execute("DROP TABLE IF EXISTS _"+output_table_name+";")
+# # 将表转为稀疏 中间产物 input_table_name -> _input_table_name
+plpy.execute("Select madlib.matrix_sparsify('"+input_table_name+"', 'row=row, val=val', '_"+input_table_name+"', 'row=row, col=col, val=val');")
+# # 处理表 中间产物 _input_table_name -> _output_table_name
+plpy.execute("Select __db4ai_execute_row_reshape(row, col, "+str(old_dim2)+","+str(dim2)+") as row, "+\
+"__db4ai_execute_col_reshape(row, col, "+str(old_dim2)+","+str(dim2)+") as col, "+\
+" val as val" +\
+" INTO _"+output_table_name+\
+" FROM _"+input_table_name+";")
+# # 将表转回稠密 output_table_name -> _output_table_name
+plpy.execute("Select madlib.matrix_densify('_"+output_table_name+"', 'row=row, col=col, val=val', '"+output_table_name+"', 'row=row, val=val');")
+# # 清理中间产物
+plpy.execute("DROP TABLE IF EXISTS _"+input_table_name+";")
+plpy.execute("DROP TABLE IF EXISTS _"+output_table_name+";")
+return 0
+$$ LANGUAGE plpythonu;
+--[执行函数]--
+CREATE OR REPLACE FUNCTION
+__db4ai_execute_row_reshape(INT, INT, INT, INT)
+RETURNS INT
+AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_reshape'
+LANGUAGE C STRICT;
+--[执行函数]--
+CREATE OR REPLACE FUNCTION
+__db4ai_execute_col_reshape(INT, INT, INT, INT)
+RETURNS INT
+AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_col_reshape'
+LANGUAGE C STRICT;
+------------------------------------------------------------
+------------------------------------------------------------
 -- db4ai_shape(input_table_name TEXT, output_table_name TEXT)
 -- input_table_name 输入的矩阵表名
 -- output_table_name 输出的向量表名
@@ -774,6 +832,32 @@ else:
     # 调用执行函数
     plpy.execute("SELECT 1 as row, madlib.matrix_sum('"+input_table_name+"','row=row,col=val',"+str(dim)+") as val INTO "+output_table_name+";")
     return 0
+$$ LANGUAGE plpythonu;
+------------------------------------------------------------
+------------------------------------------------------------
+-- db4ai_tensordot(input_table1_name TEXT, input_table2_name TEXT, output_table_name TEXT)
+-- input_table1_name 输入的矩阵表1名
+-- input_table2_name 输入的矩阵表2名
+-- output_table_name 输出的矩阵表名
+-- 返回 执行状态码
+-- 效果 将输入的矩阵表做tensorfot，形成输出矩阵表
+-- 注意 目前仅实装为dot
+------------------------------------------------------------
+--[客户端接口]--
+CREATE OR REPLACE FUNCTION
+db4ai_tensordot(input_table1_name TEXT, input_table2_name TEXT, output_table_name TEXT) --调用时表名不用加什么引号，传个字符串即可
+RETURNS INTEGER AS $$
+# 确保input_table1_name, input_table2_name存在
+not_exists1 = plpy.execute("select count(*) from pg_class where relname = '"+input_table1_name+"'")[0]["count"]==0
+not_exists2 = plpy.execute("select count(*) from pg_class where relname = '"+input_table2_name+"'")[0]["count"]==0
+if not_exists1 or not_exists2:
+    # 字符串参数代表的表不存在数据库中
+    return -1
+# 建立表
+plpy.execute("DROP TABLE IF EXISTS "+output_table_name+";")
+# 调用执行函数
+plpy.execute("SELECT db4ai_dot('"+input_table1_name+"','"+input_table2_name+"','"+output_table_name+"');")
+return 0
 $$ LANGUAGE plpythonu;
 ------------------------------------------------------------
 ------------------------------------------------------------
