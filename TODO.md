@@ -2,7 +2,8 @@
 
 简单的
 
-1. 
+1. reverse
+2. 
 
 
 
@@ -29,14 +30,12 @@
 中等的
 
 1. acc
-2. repeat
-3. reverse
-4. splitDataset
-5. f1
-6. recall
-7. precision
-8. UNSQUEEZE
-9. det -- 求行列式
+2. splitDataset
+3. f1
+4. recall
+5. precision
+6. UNSQUEEZE
+7. det -- 求行列式
 
 
 

@@ -382,3 +382,51 @@ __db4ai_execute_col_reshape(PG_FUNCTION_ARGS){ // 函数名(参数) 必须加上
     int32 new_col = rank - ((rank/dim2)*dim2) +1;
     PG_RETURN_INT32(new_col); // 返回函数值
 }
+
+/**
+ * 输入1个float8数组和一个数字，复读之后返回float8数组。
+ * @param arr_raw 输入的float8数组
+ * @param repeat 重复的次数
+ * @return 复读结果数组
+ * @author db4ai_repeat
+ */ 
+PG_FUNCTION_INFO_V1(__db4ai_execute_row_repeat);
+Datum
+__db4ai_execute_row_repeat(PG_FUNCTION_ARGS){
+    ArrayType* arr_raw = PG_GETARG_ARRAYTYPE_P(0);          // 用PG_GETARG_ARRAYTYPE_P(_COPY) 获取数组类型的指针
+    int32 repeat = PG_GETARG_INT32(1);
+    float8* arr = (float8 *) ARR_DATA_PTR(arr_raw);         // 用ARR_DATA_PTR获取实际的指针（就是数组的头）
+    int size = ARRNELEMS(arr_raw);                          // 用ARRNELEMS从源数据中获取数组的元素个数
+    // 构建一个Datum数组
+    Datum* ans_arr_back = (Datum*) palloc(repeat * size * sizeof(Datum));    // 用palloc动态分配内存
+    for(int i=0; i<size; i++){
+        for(int j=0; j<repeat; j++){
+            ans_arr_back[j * size+i] = Float8GetDatum(arr[i]);
+        }
+    }
+    // 返回该数组
+    ArrayType* result = construct_array(ans_arr_back, repeat * size, FLOAT8OID, sizeof(float8), FLOAT8PASSBYVAL, 'd');
+    PG_RETURN_ARRAYTYPE_P(result);
+}
+
+/**
+ * 输入1个float8数组和一个数字，翻转之后返回float8数组。
+ * @param arr_raw 输入的float8数组
+ * @return 翻转的结果
+ * @author db4ai_reverse
+ */ 
+PG_FUNCTION_INFO_V1(__db4ai_execute_row_flip);
+Datum
+__db4ai_execute_row_flip(PG_FUNCTION_ARGS){
+    ArrayType* arr_raw = PG_GETARG_ARRAYTYPE_P(0);          // 用PG_GETARG_ARRAYTYPE_P(_COPY) 获取数组类型的指针
+    float8* arr = (float8 *) ARR_DATA_PTR(arr_raw);         // 用ARR_DATA_PTR获取实际的指针（就是数组的头）
+    int size = ARRNELEMS(arr_raw);                          // 用ARRNELEMS从源数据中获取数组的元素个数
+    // 构建一个Datum数组
+    Datum* ans_arr_back = (Datum*) palloc(size * sizeof(Datum));    // 用palloc动态分配内存
+    for(int i=0; i<size; i++){
+        ans_arr_back[i] = Float8GetDatum(arr[size-1-i]);
+    }
+    // 返回该数组
+    ArrayType* result = construct_array(ans_arr_back, size, FLOAT8OID, sizeof(float8), FLOAT8PASSBYVAL, 'd');
+    PG_RETURN_ARRAYTYPE_P(result);
+}

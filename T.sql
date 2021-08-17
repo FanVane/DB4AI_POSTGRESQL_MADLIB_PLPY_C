@@ -150,8 +150,11 @@ if dim==1: # 按列看，不是很顺
     # # 建立一个转置的中间矩阵 _XXX
     plpy.execute("SELECT madlib.matrix_trans('"+input_table_name+"', 'row=row, val=val','_"+output_table_name+"');")
     plpy.execute("SELECT row, __db4ai_execute_row_argsort(val) as val into "+output_table_name+" from _"+output_table_name+" order by row;")
+    # 转置回来
+    plpy.execute("SELECT madlib.matrix_trans('__"+output_table_name+"', 'row=row, val=val','"+output_table_name+"');")
     # # 删除中间矩阵
     plpy.execute("DROP TABLE IF EXISTS _"+output_table_name+";")
+    plpy.execute("DROP TABLE IF EXISTS __"+output_table_name+";")
     return 0
 else: # 按行看，很顺
     # 建立表
@@ -546,6 +549,54 @@ return 0
 $$ LANGUAGE plpythonu;
 ------------------------------------------------------------
 ------------------------------------------------------------
+-- db4ai_repeat(input_table_name TEXT,dim1 INT, dim2 INT,output_table_name TEXT)
+-- input_table_name 输入的矩阵表名
+-- dim1 新的行数
+-- dim2 新的列数 要求dim1*dim2 = old_dim1 * old_dim2 
+-- output_table_name 输出的向量表名
+-- 返回 执行状态码
+-- 效果 将输入的矩阵表重组，形成输出矩阵表，返回状态码
+------------------------------------------------------------
+--[客户端接口]--
+CREATE OR REPLACE FUNCTION
+db4ai_repeat(input_table_name TEXT,dim1 INT, dim2 INT,output_table_name TEXT) --调用时表名不用加什么引号，传个字符串即可
+RETURNS INTEGER AS $$
+# 确保input_table_name存在
+not_exists = plpy.execute("select count(*) from pg_class where relname = '"+input_table_name+"'")[0]["count"]==0
+if not_exists:
+    # 字符串参数代表的表不存在数据库中
+    return -1
+# 确保dim1,dim2非负数
+if dim1<0 or dim2<0:
+    # 数字参数为负
+    return -2
+# # 复读 转置 复读 转置
+# 建立表环境
+plpy.execute("DROP TABLE IF EXISTS "+output_table_name+";")
+plpy.execute("DROP TABLE IF EXISTS _"+input_table_name+";")
+plpy.execute("DROP TABLE IF EXISTS _"+output_table_name+";")
+# 复读第一次 input_table_name -> _input_table_name
+plpy.execute("SELECT row, __db4ai_execute_row_repeat("+input_table_name+".val, "+str(dim2)+") as val into _"+input_table_name+" from "+input_table_name+";")
+# 转置第一次 _input_table_name -> _output_table_name
+plpy.execute("SELECT madlib.matrix_trans('_"+input_table_name+"', 'row=row, val=val','_"+output_table_name+"');")
+# 复读第二次 _output_table_name -> __output_table_name
+plpy.execute("SELECT row, __db4ai_execute_row_repeat(_"+output_table_name+".val, "+str(dim1)+") as val into __"+output_table_name+" from _"+output_table_name+";")
+# 转置第二次 __output_table_name -> output_table_name
+plpy.execute("SELECT madlib.matrix_trans('__"+output_table_name+"', 'row=row, val=val','"+output_table_name+"');")
+# # 清理中间产物
+plpy.execute("DROP TABLE IF EXISTS _"+input_table_name+";")
+plpy.execute("DROP TABLE IF EXISTS _"+output_table_name+";")
+plpy.execute("DROP TABLE IF EXISTS __"+output_table_name+";")
+return 0
+$$ LANGUAGE plpythonu;
+--[执行函数]--
+CREATE OR REPLACE FUNCTION
+__db4ai_execute_row_repeat(float8[], INT)
+RETURNS float8[]
+AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_repeat'
+LANGUAGE C STRICT;
+------------------------------------------------------------
+------------------------------------------------------------
 -- db4ai_reshape(input_table_name TEXT,dim1 INT, dim2 INT,output_table_name TEXT)
 -- input_table_name 输入的矩阵表名
 -- dim1 新的行数
@@ -600,6 +651,54 @@ CREATE OR REPLACE FUNCTION
 __db4ai_execute_col_reshape(INT, INT, INT, INT)
 RETURNS INT
 AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_col_reshape'
+LANGUAGE C STRICT;
+------------------------------------------------------------
+------------------------------------------------------------
+-- db4ai_reverse(input_table_name TEXT, dim INT, output_table_name TEXT)
+-- input_table_name 输入的矩阵表名
+-- dim 处理的维度
+-- output_table_name 输出的表名
+-- 返回 执行状态码
+-- 效果 将输入的矩阵按照维度flip，形成输出表
+-- 注意 输入的dim是1或者2
+------------------------------------------------------------
+--[客户端接口]--
+CREATE OR REPLACE FUNCTION
+db4ai_reverse(input_table_name TEXT, dim INT, output_table_name TEXT) --调用时表名不用加什么引号，传个字符串即可
+RETURNS INTEGER AS $$
+# 确保 input_table_name 存在
+not_exists = plpy.execute("select count(*) from pg_class where relname = '"+input_table_name+"'")[0]["count"]==0
+if not_exists:
+    # 字符串参数代表的表不存在数据库中
+    return -1
+if not (dim==1 or dim==2):
+    # 数字参数不当
+    return -2
+if dim==1: # 按列看，不是很顺
+    # 建立表
+    plpy.execute("DROP TABLE IF EXISTS "+output_table_name+";")
+    # 调用执行函数
+    # # 建立一个转置的中间矩阵 _out __out
+    plpy.execute("SELECT madlib.matrix_trans('"+input_table_name+"', 'row=row, val=val','_"+output_table_name+"');")
+    plpy.execute("SELECT row, __db4ai_execute_row_flip(val) as val into __"+output_table_name+" from _"+output_table_name+" order by row;")
+    # 转置回来
+    plpy.execute("SELECT madlib.matrix_trans('__"+output_table_name+"', 'row=row, val=val','"+output_table_name+"');")
+    # # 删除中间矩阵
+    plpy.execute("DROP TABLE IF EXISTS _"+output_table_name+";")
+    plpy.execute("DROP TABLE IF EXISTS __"+output_table_name+";")
+    return 0
+else: # 按行看，很顺
+    # 建立表
+    plpy.execute("DROP TABLE IF EXISTS "+output_table_name+";")
+    # 调用执行函数
+    plpy.execute("SELECT row, __db4ai_execute_row_flip(val) as val into "+output_table_name+" from "+input_table_name+" order by row;")
+    return 0
+$$ LANGUAGE plpythonu;
+--[执行函数]--
+CREATE OR REPLACE FUNCTION
+__db4ai_execute_row_flip(float8[])
+RETURNS float8[]
+AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_flip'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -683,8 +782,11 @@ if dim==1: # 按列看，不是很顺
     # # 建立一个转置的中间矩阵 _XXX
     plpy.execute("SELECT madlib.matrix_trans('"+input_table_name+"', 'row=row, val=val','_"+output_table_name+"');")
     plpy.execute("SELECT row, __db4ai_execute_row_softmax(val) as val into "+output_table_name+" from _"+output_table_name+" order by row;")
+    # 转置回来
+    plpy.execute("SELECT madlib.matrix_trans('__"+output_table_name+"', 'row=row, val=val','"+output_table_name+"');")
     # # 删除中间矩阵
     plpy.execute("DROP TABLE IF EXISTS _"+output_table_name+";")
+    plpy.execute("DROP TABLE IF EXISTS __"+output_table_name+";")
     return 0
 else: # 按行看，很顺
     # 建立表
@@ -728,8 +830,11 @@ if dim==1: # 按列看，不是很顺
     # # 建立一个转置的中间矩阵 _XXX
     plpy.execute("SELECT madlib.matrix_trans('"+input_table_name+"', 'row=row, val=val','_"+output_table_name+"');")
     plpy.execute("SELECT row, __db4ai_execute_row_sort(val) as val into "+output_table_name+" from _"+output_table_name+" order by row;")
+    # 转置回来
+    plpy.execute("SELECT madlib.matrix_trans('__"+output_table_name+"', 'row=row, val=val','"+output_table_name+"');")
     # # 删除中间矩阵
     plpy.execute("DROP TABLE IF EXISTS _"+output_table_name+";")
+    plpy.execute("DROP TABLE IF EXISTS __"+output_table_name+";")
     return 0
 else: # 按行看，很顺
     # 建立表
