@@ -241,3 +241,43 @@ __db4ai_execute_row_dot(PG_FUNCTION_ARGS){
     // 返回该数组
     PG_RETURN_FLOAT8(dot);
 }
+
+/**
+ * 输入1个float8数组，索引排序之后返回float8数组（在C里面还是纯float8吧）。
+ * @param arr_raw 输入的float8数组
+ * @return 整型索引数组
+ * @author db4ai_argsort
+ */ 
+PG_FUNCTION_INFO_V1(__db4ai_execute_row_argsort);
+Datum
+__db4ai_execute_row_argsort(PG_FUNCTION_ARGS){
+    ArrayType* arr_raw = PG_GETARG_ARRAYTYPE_P(0);          // 用PG_GETARG_ARRAYTYPE_P(_COPY) 获取数组类型的指针
+    float8* arr = (float8 *) ARR_DATA_PTR(arr_raw);         // 用ARR_DATA_PTR获取实际的指针（就是数组的头）
+    int size = ARRNELEMS(arr_raw);                          // 用ARRNELEMS从源数据中获取数组的元素个数
+    // 构建一个Datum数组
+    Datum* ans_arr_back = (Datum*) palloc(size * sizeof(Datum));    // 用palloc动态分配内存
+    // 索引排序：维护一个同样大小的mask数组，扫描n次，每次找到最小值及其索引，添加到返回数组中
+    int* mask = (int*) malloc(size * sizeof(int));
+    for(int i=0; i<size; i++)   mask[i] = 0;
+    int min_cur = -1;
+    for(int i=0; i<size; i++){
+        float8 min_val = __FLT64_MAX__;
+        // 寻找最小的那些东西
+        for (int j = 0; j < size; j++)
+        {
+            if(mask[j]!=0) continue;
+            if(arr[j]<min_val){
+                min_cur = j;
+                min_val = arr[j];
+            }
+        }
+        // 将最小的索引覆盖在mask上并进入返回数组中
+        mask[min_cur] = 1;
+        ans_arr_back[i] = Float8GetDatum((float8)min_cur+1);
+    }
+    free(mask);
+    // 返回该数组
+    ArrayType* result = construct_array(ans_arr_back, size, FLOAT8OID, sizeof(float8), FLOAT8PASSBYVAL, 'd');
+    PG_RETURN_ARRAYTYPE_P(result);
+}
+
