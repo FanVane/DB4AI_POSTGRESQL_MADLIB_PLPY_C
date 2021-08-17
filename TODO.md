@@ -1,36 +1,60 @@
+
+
+简单的
+
+1. slice - 这个不确定
+2. argmax -- 用madlib就行
+3. argmin -- 用madlib就行
+4. argsort -- 输入一个矩阵和维度 确定一个顺序整向量。输入向量，返回结果向量。
+5. softmax
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+中等的
+
 1. acc
-2. argmax
-3. argmin
-4. argsort
-5. assignment
-6. AUC
-7. backward
-8. cleangard
-9. createtensor
-10. det
-11. dot
-12. f1
-13. full
-14. gradient
-15. MSE
-16. pamameters
-17. precision
-18. random
-19. recall
-20. repeat
-21. reshape
-22. reverse
-23. saveParameters
-24. shape
-25. slice
-26. softmax
-27. sort
-28. splitDataset
-29. sql
-30. SUM
-31. SVD
-32. TENSORDOT
-33. TRACE
-34. UNSQUEEZE
-35. VAL
-36. WLS
+2. reshape
+3. repeat
+4. sort
+5. reverse
+6. splitDataset
+
+
+
+困难的
+
+1. det
+2. f1
+3. SVD
+4. AUC
+5. MSE
+6. UNSQUEEZE
+7. WLS
+8. recall
+9. precision
+10. TENSORDOT
+
+
+

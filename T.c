@@ -182,7 +182,7 @@ __db4ai_execute_row_pow(PG_FUNCTION_ARGS){
  * @param size 将要输出的float8数组长度
  * @param full_value 进行填充的值
  * @return 指数运算之后的数组
- * @author db4ai_pow
+ * @author db4ai_pow db4ai_trace
  */ 
 PG_FUNCTION_INFO_V1(__db4ai_execute_row_full);
 Datum
@@ -197,4 +197,47 @@ __db4ai_execute_row_full(PG_FUNCTION_ARGS){
     // 返回该数组
     ArrayType* result = construct_array(ans_arr_back, size, FLOAT8OID, sizeof(float8), FLOAT8PASSBYVAL, 'd');
     PG_RETURN_ARRAYTYPE_P(result);
+}
+
+
+/**
+ * 输入float8数组，返回它各元素总和。
+ * @param arr_raw 将入输出的float8数组
+ * @return 该数组的元素之和
+ * @author db4ai_trace
+ */ 
+PG_FUNCTION_INFO_V1(__db4ai_execute_row_sum);
+Datum
+__db4ai_execute_row_sum(PG_FUNCTION_ARGS){
+    ArrayType* arr_raw = PG_GETARG_ARRAYTYPE_P(0);          // 用PG_GETARG_ARRAYTYPE_P(_COPY) 获取数组类型的指针
+    float8 sum = 0.0;
+    float8* arr = (float8 *) ARR_DATA_PTR(arr_raw);         // 用ARR_DATA_PTR获取实际的指针（就是数组的头）
+    int size = ARRNELEMS(arr_raw);                          // 用ARRNELEMS从源数据中获取数组的元素个数
+    for(int i=0; i<size; i++){
+        sum += arr[i];
+    }
+    PG_RETURN_FLOAT8(sum);
+}
+
+/**
+ * 输入2个float8数组，求点积之后返回数。
+ * @param arr1_raw 输入的float8数组1
+ * @param arr2_raw 输入的float8数组2
+ * @return 求点积之后的数
+ * @author db4ai_div
+ */ 
+PG_FUNCTION_INFO_V1(__db4ai_execute_row_dot);
+Datum
+__db4ai_execute_row_dot(PG_FUNCTION_ARGS){
+    ArrayType* arr1_raw = PG_GETARG_ARRAYTYPE_P(0);          // 用PG_GETARG_ARRAYTYPE_P(_COPY) 获取数组类型的指针
+    ArrayType* arr2_raw = PG_GETARG_ARRAYTYPE_P(1);
+    float8* arr1 = (float8 *) ARR_DATA_PTR(arr1_raw);         // 用ARR_DATA_PTR获取实际的指针（就是数组的头）
+    float8* arr2 = (float8 *) ARR_DATA_PTR(arr2_raw);
+    int size = ARRNELEMS(arr1_raw);                          // 用ARRNELEMS从源数据中获取数组的元素个数
+    float8 dot = 0.0;
+    for(int i=0; i<size; i++){
+        dot += arr1[i] * arr2[i];
+    }
+    // 返回该数组
+    PG_RETURN_FLOAT8(dot);
 }

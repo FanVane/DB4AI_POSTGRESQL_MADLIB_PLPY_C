@@ -60,6 +60,68 @@ return 0
 $$ LANGUAGE plpythonu;
 ------------------------------------------------------------
 ------------------------------------------------------------
+-- db4ai_argmax(input_table_name TEXT, dim INT, output_table_name TEXT)
+-- input_table_name 输入的矩阵表名
+-- dim 处理的维度
+-- output_table_name 输出的表名
+-- 返回 执行状态码
+-- 效果 将输入的矩阵表的每个元素都找最大值的索引，形成输出表
+-- 注意 输入的dim是1或者2，返回的索引从1开始，和torch不同。
+------------------------------------------------------------
+--[客户端接口]--
+CREATE OR REPLACE FUNCTION
+db4ai_argmax(input_table_name TEXT, dim INT, output_table_name TEXT) --调用时表名不用加什么引号，传个字符串即可
+RETURNS INTEGER AS $$
+# 确保 input_table_name 存在
+not_exists = plpy.execute("select count(*) from pg_class where relname = '"+input_table_name+"'")[0]["count"]==0
+if not_exists:
+    # 字符串参数代表的表不存在数据库中
+    return -1
+if not (dim==1 or dim==2):
+    # 数字参数不当
+    return -2
+# 建立表
+plpy.execute("DROP TABLE IF EXISTS "+output_table_name+";")
+# 调用执行函数
+plpy.execute("SELECT madlib.matrix_max('"+input_table_name+"','row=row,col=val',"+str(dim)+",'_"+output_table_name+"',true);")
+plpy.execute("SELECT 1 as row, index as val into "+output_table_name+" from _"+output_table_name+";")
+# 删除中间表
+plpy.execute("DROP TABLE IF EXISTS _"+output_table_name+";")
+return 0
+$$ LANGUAGE plpythonu;
+------------------------------------------------------------
+------------------------------------------------------------
+-- db4ai_argmin(input_table_name TEXT, dim INT, output_table_name TEXT)
+-- input_table_name 输入的矩阵表名
+-- dim 处理的维度
+-- output_table_name 输出的表名
+-- 返回 执行状态码
+-- 效果 将输入的矩阵表的每个元素都找最小值的索引，形成输出表
+-- 注意 输入的dim是1或者2，返回的索引从1开始，和torch不同。
+------------------------------------------------------------
+--[客户端接口]--
+CREATE OR REPLACE FUNCTION
+db4ai_argmin(input_table_name TEXT, dim INT, output_table_name TEXT) --调用时表名不用加什么引号，传个字符串即可
+RETURNS INTEGER AS $$
+# 确保 input_table_name 存在
+not_exists = plpy.execute("select count(*) from pg_class where relname = '"+input_table_name+"'")[0]["count"]==0
+if not_exists:
+    # 字符串参数代表的表不存在数据库中
+    return -1
+if not (dim==1 or dim==2):
+    # 数字参数不当
+    return -2
+# 建立表
+plpy.execute("DROP TABLE IF EXISTS "+output_table_name+";")
+# 调用执行函数
+plpy.execute("SELECT madlib.matrix_min('"+input_table_name+"','row=row,col=val',"+str(dim)+",'_"+output_table_name+"',true);")
+plpy.execute("SELECT 1 as row, index as val into "+output_table_name+" from _"+output_table_name+";")
+# 删除中间表
+plpy.execute("DROP TABLE IF EXISTS _"+output_table_name+";")
+return 0
+$$ LANGUAGE plpythonu;
+------------------------------------------------------------
+------------------------------------------------------------
 -- db4ai_div(input_table1_name TEXT, input_table2_name TEXT, output_table_name TEXT)
 -- input_table1_name 输入的矩阵表1名（被除数）
 -- input_table2_name 输入的矩阵表2名（除数）
@@ -91,6 +153,41 @@ CREATE OR REPLACE FUNCTION
 __db4ai_execute_row_div(float8[], float8[])
 RETURNS float8[]
 AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_div'
+LANGUAGE C STRICT;
+------------------------------------------------------------
+------------------------------------------------------------
+-- db4ai_dot(input_table1_name TEXT, input_table2_name TEXT, output_table_name TEXT)
+-- input_table1_name 输入的矩阵（向量）表名
+-- input_table2_name 输入的矩阵（向量）表名
+-- output_table_name 输出的矩阵表名
+-- 返回 执行状态码
+-- 效果 将输入的向量求数量积形成输出表
+------------------------------------------------------------
+--[客户端接口]--
+CREATE OR REPLACE FUNCTION
+db4ai_dot(input_table1_name TEXT, input_table2_name TEXT, output_table_name TEXT) --调用时表名不用加什么引号，传个字符串即可
+RETURNS INTEGER AS $$
+# 确保input_table1_name, input_table2_name存在
+not_exists1 = plpy.execute("select count(*) from pg_class where relname = '"+input_table1_name+"'")[0]["count"]==0
+not_exists2 = plpy.execute("select count(*) from pg_class where relname = '"+input_table2_name+"'")[0]["count"]==0
+if not_exists1 or not_exists2:
+    # 字符串参数代表的表不存在数据库中
+    return -1
+# 确保两个向量的长度相同（暂未实装）
+# 建立输出表
+plpy.execute("DROP TABLE IF EXISTS "+output_table_name+";")
+# 调用执行函数
+plpy.execute("SELECT 1 as row, __db4ai_execute_row_full(1, __db4ai_execute_row_dot("+input_table1_name+".val,"+input_table2_name+".val)) as val "+
+" into "+output_table_name+\
+" from "+input_table1_name+", "+input_table2_name+\
+" ;")
+return 0
+$$ LANGUAGE plpythonu;
+--[执行函数]--
+CREATE OR REPLACE FUNCTION
+__db4ai_execute_row_dot(float8[], float8[])
+RETURNS float8
+AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_dot'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -373,6 +470,58 @@ AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_pow'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
+-- db4ai_random(dim1 INT, dim2 INT, output_table_name TEXT)
+-- dim1 行数
+-- dim2 列数
+-- _distribution 分布方式: Normal Uniform Bernoulli
+-- ——args 更多参数，和_distribution参数有关：
+    -- Supported parameters:
+        -- Normal: mu, sigma
+        -- Uniform: min, max
+        -- Bernoulli: lower, upper, prob
+-- output_table_name 输出的表名
+-- 返回 执行状态码
+-- 效果 创建一个dim1行dim2的名为output_table_name的随机矩阵表
+-- 实例 select db4ai_random(10,10,'normal','mu=0,sigma=1','random');
+------------------------------------------------------------
+--[客户端接口]--
+CREATE OR REPLACE FUNCTION
+db4ai_random(dim1 INT, dim2 INT, _distribution TEXT, _args TEXT, output_table_name TEXT) --调用时表名不用加什么引号，传个字符串即可
+RETURNS INTEGER AS $$
+# 确保dim1,dim2非负数
+if dim1<0 or dim2<0:
+    # 数字参数为负
+    return -2
+# 建立表
+plpy.execute("DROP TABLE IF EXISTS "+output_table_name+";")
+plpy.execute("Select madlib.matrix_random( "+str(dim1)+" ,"+str(dim2)+", '"+_args+"','"+_distribution+"', '"+output_table_name+"','fmt=dense');")
+return 0
+$$ LANGUAGE plpythonu;
+------------------------------------------------------------
+------------------------------------------------------------
+-- db4ai_shape(input_table_name TEXT, output_table_name TEXT)
+-- input_table_name 输入的矩阵表名
+-- output_table_name 输出的向量表名
+-- 返回 执行状态码
+-- 效果 将输入的矩阵表求行数和列数，形成输出矩阵表，返回状态码
+------------------------------------------------------------
+--[客户端接口]--
+CREATE OR REPLACE FUNCTION
+db4ai_shape(input_table_name TEXT, output_table_name TEXT) --调用时表名不用加什么引号，传个字符串即可
+RETURNS INTEGER AS $$
+# 确保input_table_name存在
+not_exists = plpy.execute("select count(*) from pg_class where relname = '"+input_table_name+"'")[0]["count"]==0
+if not_exists:
+    # 字符串参数代表的表不存在数据库中
+    return -1
+# 建立表
+plpy.execute("DROP TABLE IF EXISTS "+output_table_name+";")
+# 调用执行函数
+plpy.execute("SELECT 1 as row ,madlib.matrix_ndims('"+input_table_name+"', 'row=row, val=val') as val INTO "+output_table_name+";")
+return 0
+$$ LANGUAGE plpythonu;
+------------------------------------------------------------
+------------------------------------------------------------
 -- db4ai_sqrt(input_table_name TEXT, output_table_name TEXT)
 -- input_table_name 输入的矩阵表名
 -- output_table_name 输出的矩阵表名
@@ -424,6 +573,119 @@ plpy.execute("DROP TABLE IF EXISTS "+output_table_name+";")
 # 调用执行函数
 plpy.execute("SELECT madlib.matrix_sub('"+input_table1_name+"','row=row,col=val','"+input_table2_name+"','row=row,col=val','"+output_table_name+"');")
 return 0
+$$ LANGUAGE plpythonu;
+------------------------------------------------------------
+------------------------------------------------------------
+-- db4ai_sum(input_table_name TEXT, dim INT, output_table_name TEXT)
+-- input_table_name 输入的矩阵表1名
+-- dim 聚合最大值的维度 1为按列 2为按行
+-- output_table_name 输出的矩阵表名
+-- 返回 执行状态码
+-- 效果 将输入的矩阵表按选择的维度求和，形成数值表
+------------------------------------------------------------
+--[客户端接口]--
+CREATE OR REPLACE FUNCTION
+db4ai_sum(input_table_name TEXT, dim INT, output_table_name TEXT) --调用时表名不用加什么引号，传个字符串即可
+RETURNS INTEGER AS $$
+# 确保input_table_name存在
+not_exists = plpy.execute("select count(*) from pg_class where relname = '"+input_table_name+"'")[0]["count"]==0
+if not_exists:
+    # 字符串参数代表的表不存在数据库中
+    return -1
+# 确保参数输入正确
+if not (dim==1 or dim==2 or dim==0):
+    # 数字参数不当
+    return -2
+if dim==0:
+    # 将一次求和的结果求和再形成张量表返回
+    plpy.execute("DROP TABLE IF EXISTS "+output_table_name+";")
+    # 调用执行函数
+    plpy.execute("SELECT 1 as row, __db4ai_execute_row_full(1, __db4ai_execute_row_sum(madlib.matrix_sum('"+input_table_name+"','row=row,col=val', 1))) as val INTO "+output_table_name+";")
+    return 0
+else:
+    # 建立表
+    plpy.execute("DROP TABLE IF EXISTS "+output_table_name+";")
+    # 调用执行函数
+    plpy.execute("SELECT 1 as row, madlib.matrix_sum('"+input_table_name+"','row=row,col=val',"+str(dim)+") as val INTO "+output_table_name+";")
+    return 0
+$$ LANGUAGE plpythonu;
+------------------------------------------------------------
+------------------------------------------------------------
+-- db4ai_trace(input_table_name TEXT, output_table_name TEXT)
+-- input_table_name 输入的表名
+-- output_table_name 输出的表名
+-- 返回 执行状态码 如果不是方阵则返回-3。
+-- 效果 将输入的表名对应的方阵求trace后返回，和其它张量操作不同。
+------------------------------------------------------------
+--[客户端接口]--
+CREATE OR REPLACE FUNCTION
+db4ai_trace(input_table_name TEXT, output_table_name TEXT) --调用时表名不用加什么引号，传个字符串即可
+RETURNS INTEGER AS $$
+# 表不存在则返回-1
+table_ans = plpy.execute("select count(*) from pg_class where relname = '"+input_table_name+"'")
+not_exists = table_ans[0]["count"]==0
+if not_exists:
+    return -1
+# 表不是方阵则返回-3（尚未实现）
+not_square = False
+if not_square:
+    return -3
+# 计算trace并返回：用matrix_extract_diag提取对角线向量，再求和
+# 建立表
+plpy.execute("DROP TABLE IF EXISTS "+output_table_name+";")
+plpy.execute("SELECT 1 as row, __db4ai_execute_row_full(1, __db4ai_execute_row_sum(madlib.matrix_extract_diag('"+input_table_name+"','row=row,col=val'))) as val into "+output_table_name+";")
+return 0
+$$ LANGUAGE plpythonu;
+--[执行函数]--
+CREATE OR REPLACE FUNCTION
+__db4ai_execute_row_sum(float8[]) -- 别忘了改这里！！！
+RETURNS float8
+AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_sum'
+LANGUAGE C STRICT;
+------------------------------------------------------------
+-- db4ai_val 设置常数变量的模块，包括set和get方法
+------------------------------------------------------------
+-- db4ai_val_set(var_name TEXT, val TEXT)
+-- var_name 输入的变量名
+-- val 输入的变量值
+-- 返回 执行状态码
+-- 效果 将输入的变量名存储起来
+------------------------------------------------------------
+--[客户端接口]--
+CREATE OR REPLACE FUNCTION
+db4ai_val_set(var_name TEXT, val TEXT) --调用时表名不用加什么引号，传个字符串即可
+RETURNS INTEGER AS $$
+# 如果常量表不存在，则新建
+val_table_name = "vals"
+not_exists = plpy.execute("select count(*) from pg_class where relname = '"+val_table_name+"'")[0]["count"]==0
+if not_exists:
+    plpy.execute("CREATE TABLE "+val_table_name+"(var_name TEXT, val TEXT);") 
+# 移除变量并重新添加
+plpy.execute("DELETE FROM "+val_table_name+" WHERE var_name='"+val+"';")
+plpy.execute("INSERT INTO "+val_table_name+" VALUES ('"+var_name+"','"+val+"');")
+return 0
+$$ LANGUAGE plpythonu;
+------------------------------------------------------------
+-- db4ai_val_get(var_name TEXT)
+-- var_name 输出的变量名
+-- 返回 执行状态码
+-- 效果 读取请求的变量名以字符串的方式返回，不存在返回"NONE"。
+------------------------------------------------------------
+--[客户端接口]--
+CREATE OR REPLACE FUNCTION
+db4ai_val_get(var_name TEXT)
+RETURNS TEXT AS $$
+# 如果常量表不存在，则返回无
+val_table_name = "vals"
+not_exists = plpy.execute("select count(*) from pg_class where relname = '"+val_table_name+"'")[0]["count"]==0
+if not_exists:
+    return "NONE"
+# 返回变量数值字符串
+ans = plpy.execute("select val from "+val_table_name+" WHERE var_name='"+var_name+"';")
+if len(ans)==0:
+    return "NONE"
+else: 
+    return ans[0]["val"]
 $$ LANGUAGE plpythonu;
 -------------------------------------------------------------
 -------------------------------------------------------------
