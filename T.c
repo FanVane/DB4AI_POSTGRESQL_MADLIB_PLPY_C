@@ -307,3 +307,36 @@ __db4ai_execute_row_softmax(PG_FUNCTION_ARGS){
     ArrayType* result = construct_array(ans_arr_back, size, FLOAT8OID, sizeof(float8), FLOAT8PASSBYVAL, 'd');
     PG_RETURN_ARRAYTYPE_P(result);
 }
+
+/**
+ * 输入1个float8数组，排序之后返回float8数组。
+ * @param arr_raw 输入的float8数组
+ * @return 排序结果数组
+ * @author db4ai_args
+ */ 
+PG_FUNCTION_INFO_V1(__db4ai_execute_row_sort);
+Datum
+__db4ai_execute_row_sort(PG_FUNCTION_ARGS){
+    ArrayType* arr_raw = PG_GETARG_ARRAYTYPE_P(0);          // 用PG_GETARG_ARRAYTYPE_P(_COPY) 获取数组类型的指针
+    float8* arr = (float8 *) ARR_DATA_PTR(arr_raw);         // 用ARR_DATA_PTR获取实际的指针（就是数组的头）
+    int size = ARRNELEMS(arr_raw);                          // 用ARRNELEMS从源数据中获取数组的元素个数
+    // 构建一个Datum数组
+    Datum* ans_arr_back = (Datum*) palloc(size * sizeof(Datum));    // 用palloc动态分配内存
+    float8* ans_arr = (float8*) malloc(size * sizeof(float8));
+    // 先复制再说
+    for(int i=0; i<size; i++) ans_arr[i] = arr[i];
+    // 冒泡排序
+    for(int i=0; i<size-1; i++){
+        for(int j=0; j<size-i-1; j++){
+            if(ans_arr[j]>ans_arr[j+1]){
+                float8 temp = ans_arr[j];
+                ans_arr[j] = ans_arr[j+1];
+                ans_arr[j+1] = temp;
+            }
+        }
+    }
+    for(int i=0; i<size; i++)   ans_arr_back[i] = Float8GetDatum(ans_arr[i]);
+    // 返回该数组
+    ArrayType* result = construct_array(ans_arr_back, size, FLOAT8OID, sizeof(float8), FLOAT8PASSBYVAL, 'd');
+    PG_RETURN_ARRAYTYPE_P(result);
+}

@@ -2,7 +2,8 @@
 
 简单的
 
-
+1. 
+2. 
 
 
 
@@ -31,24 +32,23 @@
 1. acc
 2. reshape
 3. repeat
-4. sort
-5. reverse
-6. splitDataset
-7. f1
-8. recall
-9. precision
-10. UNSQUEEZE
+4. reverse
+5. splitDataset
+6. f1
+7. recall
+8. precision
+9. UNSQUEEZE
 
 
 
 困难的
 
 1. det
-2. SVD
-3. AUC
-4. MSE
-5. WLS
-6. TENSORDOT
+2. AUC
+3. MSE
+4. WLS
+5. TENSORDOT
+6. SVD
 
 
 
