@@ -430,3 +430,79 @@ __db4ai_execute_row_flip(PG_FUNCTION_ARGS){
     ArrayType* result = construct_array(ans_arr_back, size, FLOAT8OID, sizeof(float8), FLOAT8PASSBYVAL, 'd');
     PG_RETURN_ARRAYTYPE_P(result);
 }
+
+/**
+ * 输入2个float8数组，求匹配个数之后返回数。
+ * @param arr1_raw 输入的float8数组1
+ * @param arr2_raw 输入的float8数组2
+ * @return 求匹配之后的数
+ * @author db4ai_div
+ */ 
+PG_FUNCTION_INFO_V1(__db4ai_execute_row_acc);
+Datum
+__db4ai_execute_row_acc(PG_FUNCTION_ARGS){
+    ArrayType* arr1_raw = PG_GETARG_ARRAYTYPE_P(0);          // 用PG_GETARG_ARRAYTYPE_P(_COPY) 获取数组类型的指针
+    ArrayType* arr2_raw = PG_GETARG_ARRAYTYPE_P(1);
+    float8* arr1 = (float8 *) ARR_DATA_PTR(arr1_raw);         // 用ARR_DATA_PTR获取实际的指针（就是数组的头）
+    float8* arr2 = (float8 *) ARR_DATA_PTR(arr2_raw);
+    int size = ARRNELEMS(arr1_raw);                          // 用ARRNELEMS从源数据中获取数组的元素个数
+    float8 acc = 0.0;
+    float8 e = 0.01;
+    for(int i=0; i<size; i++){
+        acc += (arr1[i]-arr2[i]<=e)?1:0;
+    }
+    // 返回该数组
+    PG_RETURN_FLOAT8(acc);
+}
+
+/**
+ * 输入2个float8数组，求正类预测成功比率之后返回数。
+ * @param arr1_raw 输入的float8数组1 expected
+ * @param arr2_raw 输入的float8数组2 actual
+ * @return 分数
+ * @author db4ai_precision
+ */ 
+PG_FUNCTION_INFO_V1(__db4ai_execute_row_precision);
+Datum
+__db4ai_execute_row_precision(PG_FUNCTION_ARGS){
+    ArrayType* arr1_raw = PG_GETARG_ARRAYTYPE_P(0);          // 用PG_GETARG_ARRAYTYPE_P(_COPY) 获取数组类型的指针
+    ArrayType* arr2_raw = PG_GETARG_ARRAYTYPE_P(1);
+    float8* arr1 = (float8 *) ARR_DATA_PTR(arr1_raw);         // 用ARR_DATA_PTR获取实际的指针（就是数组的头）
+    float8* arr2 = (float8 *) ARR_DATA_PTR(arr2_raw);
+    int size = ARRNELEMS(arr1_raw);                          // 用ARRNELEMS从源数据中获取数组的元素个数
+    float8 my_all = 0.0;
+    float8 my_correct = 0.0;
+    float8 e = 0.01;
+    for(int i=0; i<size; i++){
+        if(arr2[i]-1<e) my_all += 1.0;
+        if(arr2[i]-1<e && arr1[i]-arr2[i]<e) my_correct += 1.0;
+    }
+    // 返回该数组
+    PG_RETURN_FLOAT8(my_correct/my_all);
+}
+
+/**
+ * 输入2个float8数组，求正类预测成功比率之后返回数。
+ * @param arr1_raw 输入的float8数组1 expected
+ * @param arr2_raw 输入的float8数组2 actual
+ * @return 分数
+ * @author db4ai_recall
+ */ 
+PG_FUNCTION_INFO_V1(__db4ai_execute_row_recall);
+Datum
+__db4ai_execute_row_recall(PG_FUNCTION_ARGS){
+    ArrayType* arr1_raw = PG_GETARG_ARRAYTYPE_P(0);          // 用PG_GETARG_ARRAYTYPE_P(_COPY) 获取数组类型的指针
+    ArrayType* arr2_raw = PG_GETARG_ARRAYTYPE_P(1);
+    float8* arr1 = (float8 *) ARR_DATA_PTR(arr1_raw);         // 用ARR_DATA_PTR获取实际的指针（就是数组的头）
+    float8* arr2 = (float8 *) ARR_DATA_PTR(arr2_raw);
+    int size = ARRNELEMS(arr1_raw);                          // 用ARRNELEMS从源数据中获取数组的元素个数
+    float8 my_all = 0.0;
+    float8 my_correct = 0.0;
+    float8 e = 0.01;
+    for(int i=0; i<size; i++){
+        if(arr1[i]-1<e) my_all += 1.0;
+        if(arr2[i]-1<e && arr1[i]-arr2[i]<e) my_correct += 1.0;
+    }
+    // 返回该数组
+    PG_RETURN_FLOAT8(my_correct/my_all);
+}

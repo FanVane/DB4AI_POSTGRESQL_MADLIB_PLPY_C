@@ -33,6 +33,57 @@ __db4ai_execute_row_abs(float8[])
 RETURNS float8[]
 AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_abs'
 LANGUAGE C STRICT;
+
+------------------------------------------------------------
+------------------------------------------------------------
+-- db4ai_acc(input_table1_name TEXT, input_table2_name TEXT, option TEXT,output_table_name TEXT)
+-- input_table1_name 输入的矩阵（向量）表名
+-- input_table2_name 输入的矩阵（向量）表名
+-- norp 'N' or 'P' : 数量 or 比例
+-- output_table_name 输出的矩阵表名
+-- 返回 执行状态码
+-- 效果 将输入的向量求匹配形成输出表
+------------------------------------------------------------
+--[客户端接口]--
+CREATE OR REPLACE FUNCTION
+db4ai_acc(input_table1_name TEXT, input_table2_name TEXT, norp TEXT,output_table_name TEXT) --调用时表名不用加什么引号，传个字符串即可
+RETURNS INTEGER AS $$
+# 确保input_table1_name, input_table2_name存在
+not_exists1 = plpy.execute("select count(*) from pg_class where relname = '"+input_table1_name+"'")[0]["count"]==0
+not_exists2 = plpy.execute("select count(*) from pg_class where relname = '"+input_table2_name+"'")[0]["count"]==0
+if not_exists1 or not_exists2:
+    # 字符串参数代表的表不存在数据库中
+    return -1
+if not (norp=="N" or norp=="P" or norp=="n" or norp=="p"):
+    # 字母参数不当
+    return -4
+# 确保两个向量的长度相同（暂未实装）
+# 建立输出表
+plpy.execute("DROP TABLE IF EXISTS "+output_table_name+";")
+if norp=="N" or norp=="n":
+    # 调用执行函数
+    plpy.execute("SELECT "+input_table1_name+".row as row, __db4ai_execute_row_full(1, __db4ai_execute_row_acc("+input_table1_name+".val,"+input_table2_name+".val)) as val "+
+    " into "+output_table_name+\
+    " from "+input_table1_name+", "+input_table2_name+\
+    " where "+input_table1_name+".row = "+input_table2_name+".row"+\
+    " ;")
+elif norp=="P" or norp=="p":
+    # 获取长度
+    len = plpy.execute("select madlib.matrix_ndims('"+input_table1_name+"', 'row=row, val=val') as shape;")[0]["shape"][1]
+    # 调用执行函数
+    plpy.execute("SELECT "+input_table1_name+".row as row, __db4ai_execute_row_full(1, __db4ai_execute_row_acc("+input_table1_name+".val,"+input_table2_name+".val)/"+str(len)+" ) as val "+
+    " into "+output_table_name+\
+    " from "+input_table1_name+", "+input_table2_name+\
+    " where "+input_table1_name+".row = "+input_table2_name+".row"+\
+    " ;")
+return 0
+$$ LANGUAGE plpythonu;
+--[执行函数]--
+CREATE OR REPLACE FUNCTION
+__db4ai_execute_row_acc(float8[], float8[])
+RETURNS float8
+AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_acc'
+LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
 -- db4ai_add(input_table1_name TEXT, input_table2_name TEXT, output_table_name TEXT)
@@ -519,8 +570,43 @@ RETURNS float8[]
 AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_pow'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
+-- db4ai_precision(input_table1_name TEXT, input_table2_name TEXT, output_table_name TEXT)
+-- input_table1_name 输入的矩阵（向量）表名
+-- input_table2_name 输入的矩阵（向量）表名
+-- output_table_name 输出的矩阵表名
+-- 返回 执行状态码
+-- 效果 将输入的向量求分数形成输出表
 ------------------------------------------------------------
--- db4ai_random(dim1 INT, dim2 INT, output_table_name TEXT)
+--[客户端接口]--
+CREATE OR REPLACE FUNCTION
+db4ai_precision(input_table1_name TEXT, input_table2_name TEXT, output_table_name TEXT) --调用时表名不用加什么引号，传个字符串即可
+RETURNS INTEGER AS $$
+# 确保input_table1_name, input_table2_name存在
+not_exists1 = plpy.execute("select count(*) from pg_class where relname = '"+input_table1_name+"'")[0]["count"]==0
+not_exists2 = plpy.execute("select count(*) from pg_class where relname = '"+input_table2_name+"'")[0]["count"]==0
+if not_exists1 or not_exists2:
+    # 字符串参数代表的表不存在数据库中
+    return -1
+# 确保两个向量的长度相同（暂未实装）
+# 建立输出表
+plpy.execute("DROP TABLE IF EXISTS "+output_table_name+";")
+# 调用执行函数
+plpy.execute("SELECT "+input_table1_name+".row as row, __db4ai_execute_row_full(1, __db4ai_execute_row_precision("+input_table1_name+".val,"+input_table2_name+".val)) as val "+
+" into "+output_table_name+\
+" from "+input_table1_name+", "+input_table2_name+\
+" where "+input_table1_name+".row = "+input_table2_name+".row"+\
+" ;")
+return 0
+$$ LANGUAGE plpythonu;
+--[执行函数]--
+CREATE OR REPLACE FUNCTION
+__db4ai_execute_row_precision(float8[], float8[])
+RETURNS float8
+AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_precision'
+LANGUAGE C STRICT;
+------------------------------------------------------------
+------------------------------------------------------------
+-- db4ai_random(dim1 INT, dim2 INT, _distribution TEXT, _args TEXT, output_table_name TEXT) 
 -- dim1 行数
 -- dim2 列数
 -- _distribution 分布方式: Normal Uniform Bernoulli
@@ -547,6 +633,41 @@ plpy.execute("DROP TABLE IF EXISTS "+output_table_name+";")
 plpy.execute("Select madlib.matrix_random( "+str(dim1)+" ,"+str(dim2)+", '"+_args+"','"+_distribution+"', '"+output_table_name+"','fmt=dense');")
 return 0
 $$ LANGUAGE plpythonu;
+------------------------------------------------------------
+-- db4ai_recall(input_table1_name TEXT, input_table2_name TEXT, output_table_name TEXT)
+-- input_table1_name 输入的矩阵（向量）表名
+-- input_table2_name 输入的矩阵（向量）表名
+-- output_table_name 输出的矩阵表名
+-- 返回 执行状态码
+-- 效果 将输入的向量求分数形成输出表
+------------------------------------------------------------
+--[客户端接口]--
+CREATE OR REPLACE FUNCTION
+db4ai_recall(input_table1_name TEXT, input_table2_name TEXT, output_table_name TEXT) --调用时表名不用加什么引号，传个字符串即可
+RETURNS INTEGER AS $$
+# 确保input_table1_name, input_table2_name存在
+not_exists1 = plpy.execute("select count(*) from pg_class where relname = '"+input_table1_name+"'")[0]["count"]==0
+not_exists2 = plpy.execute("select count(*) from pg_class where relname = '"+input_table2_name+"'")[0]["count"]==0
+if not_exists1 or not_exists2:
+    # 字符串参数代表的表不存在数据库中
+    return -1
+# 确保两个向量的长度相同（暂未实装）
+# 建立输出表
+plpy.execute("DROP TABLE IF EXISTS "+output_table_name+";")
+# 调用执行函数
+plpy.execute("SELECT "+input_table1_name+".row as row, __db4ai_execute_row_full(1, __db4ai_execute_row_recall("+input_table1_name+".val,"+input_table2_name+".val)) as val "+
+" into "+output_table_name+\
+" from "+input_table1_name+", "+input_table2_name+\
+" where "+input_table1_name+".row = "+input_table2_name+".row"+\
+" ;")
+return 0
+$$ LANGUAGE plpythonu;
+--[执行函数]--
+CREATE OR REPLACE FUNCTION
+__db4ai_execute_row_recall(float8[], float8[])
+RETURNS float8
+AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_recall'
+LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
 -- db4ai_repeat(input_table_name TEXT,dim1 INT, dim2 INT,output_table_name TEXT)
