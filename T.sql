@@ -2,7 +2,7 @@
 CREATE OR REPLACE FUNCTION
 add_ab(int, int)
 RETURNS INT
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','add_ab'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','add_ab'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -31,7 +31,7 @@ $$ LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION
 __db4ai_execute_row_abs(float8[])
 RETURNS float8[]
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_abs'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_abs'
 LANGUAGE C STRICT;
 
 ------------------------------------------------------------
@@ -82,7 +82,7 @@ $$ LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION
 __db4ai_execute_row_acc(float8[], float8[])
 RETURNS float8
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_acc'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_acc'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -218,7 +218,7 @@ $$ LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION
 __db4ai_execute_row_argsort(float8[])
 RETURNS INT[]
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_argsort'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_argsort'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -252,7 +252,7 @@ $$ LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION
 __db4ai_execute_row_div(float8[], float8[])
 RETURNS float8[]
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_div'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_div'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -288,7 +288,7 @@ $$ LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION
 __db4ai_execute_row_dot(float8[], float8[])
 RETURNS float8
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_dot'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_dot'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -317,7 +317,7 @@ $$ LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION
 __db4ai_execute_row_exp(float8[]) --传输一个数组，传出一个数组
 RETURNS float8[]
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_exp'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_exp'
 LANGUAGE C STRICT;
 -------------------------------------------------------------
 -------------------------------------------------------------
@@ -350,7 +350,16 @@ $$ LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION
 __db4ai_execute_row_full(int, float8) --传两个数字，出一个数组
 RETURNS float8[]
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_full'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_full'
+LANGUAGE C STRICT;
+
+
+
+--[执行函数]--
+CREATE OR REPLACE FUNCTION
+__db4ai_execute_row_full(int, float8) --传两个数字，出一个数组
+RETURNS float8[]
+AS 'db4ai_funcs','__db4ai_execute_row_full'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -379,7 +388,7 @@ $$ LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION
 __db4ai_execute_row_log(float8[])
 RETURNS float8[]
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_log'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_log'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -567,7 +576,7 @@ $$ LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION
 __db4ai_execute_row_pow(float8[], float8) -- DONT'T FORGET TO CHANGE IT AFTER COPY.
 RETURNS float8[]
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_pow'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_pow'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 -- db4ai_precision(input_table1_name TEXT, input_table2_name TEXT, output_table_name TEXT)
@@ -602,7 +611,7 @@ $$ LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION
 __db4ai_execute_row_precision(float8[], float8[])
 RETURNS float8
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_precision'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_precision'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -666,7 +675,7 @@ $$ LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION
 __db4ai_execute_row_recall(float8[], float8[])
 RETURNS float8
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_recall'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_recall'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -714,7 +723,7 @@ $$ LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION
 __db4ai_execute_row_repeat(float8[], INT)
 RETURNS float8[]
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_repeat'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_repeat'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -765,13 +774,13 @@ $$ LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION
 __db4ai_execute_row_reshape(INT, INT, INT, INT)
 RETURNS INT
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_reshape'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_reshape'
 LANGUAGE C STRICT;
 --[执行函数]--
 CREATE OR REPLACE FUNCTION
 __db4ai_execute_col_reshape(INT, INT, INT, INT)
 RETURNS INT
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_col_reshape'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_col_reshape'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -819,7 +828,7 @@ $$ LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION
 __db4ai_execute_row_flip(float8[])
 RETURNS float8[]
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_flip'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_flip'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -920,7 +929,7 @@ $$ LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION
 __db4ai_execute_row_softmax(float8[])
 RETURNS float8[]
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_softmax'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_softmax'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -968,7 +977,7 @@ $$ LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION
 __db4ai_execute_row_sort(float8[])
 RETURNS float8[]
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_sort'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_sort'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -997,7 +1006,7 @@ $$ LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION
 __db4ai_execute_row_sqrt(float8[]) -- DONT'T FORGET TO CHANGE IT AFTER COPY.
 RETURNS float8[]
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_sqrt'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_sqrt'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -1116,7 +1125,7 @@ $$ LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION
 __db4ai_execute_row_sum(float8[]) -- 别忘了改这里！！！
 RETURNS float8
-AS '/home/lbx/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_sum'
+AS '/home/postgres/soft/db4ai_funcs/db4ai_funcs','__db4ai_execute_row_sum'
 LANGUAGE C STRICT;
 ------------------------------------------------------------
 -- db4ai_val 设置常数变量的模块，包括set和get方法
